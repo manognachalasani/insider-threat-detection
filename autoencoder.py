@@ -32,42 +32,32 @@ class Autoencoder(nn.Module):
 def run_autoencoder(data):
     print("\nRunning Autoencoder...\n")
 
-    #check requied column
     if "user_id" not in data.columns:
         raise ValueError("Dataset must contain 'user_id' column")
 
-    #handle non numeric data
+    #preprocessing
     feature_cols = data.columns.drop("user_id")
-
-    # keep only numeric columns
     numeric_data = data[feature_cols].select_dtypes(include=[np.number])
 
-    if numeric_data.shape[1] == 0:
-        raise ValueError("No numeric features found in dataset")
-
-    #scaling
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(numeric_data)
 
     user_ids = data["user_id"].values
 
-    #define normal data as first 90% of samples
-    # assume majority is normal
     n_normal = int(0.9 * len(X_scaled))
-
     X_train = X_scaled[:n_normal]
     X_test = X_scaled
 
-    print(f"Using first {n_normal} samples as normal data")
+    print(f"Using first {n_normal} rows as normal data")
 
-    #model setup
+    #model
     model = Autoencoder(X_train.shape[1])
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
 
-    #training loop
+    # training
     for epoch in range(50):
         optimizer.zero_grad()
         output = model(X_train_tensor)
@@ -75,65 +65,83 @@ def run_autoencoder(data):
         loss.backward()
         optimizer.step()
 
-        if epoch % 10 == 0:
-            print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
-
-    #anomaly detection
+    # reconstruction error
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
 
     with torch.no_grad():
         reconstructed = model(X_test_tensor)
-        errors = torch.mean((X_test_tensor - reconstructed)**2, dim=1).numpy()
+        feature_errors = (X_test_tensor - reconstructed) ** 2
+        feature_errors = feature_errors.numpy()
 
-    threshold = errors[:n_normal].mean() + 2 * errors[:n_normal].std()
-    predictions = (errors > threshold).astype(int)
+    # feature grouping based on column names
+    cols = numeric_data.columns
+    cols_lower = [c.lower() for c in cols]
 
-    print(f"\nThreshold: {threshold:.4f}")
-    print(f"Total anomalies detected: {predictions.sum()}")
+    login_cols = [cols[i] for i, c in enumerate(cols_lower) if "login" in c]
+    volume_cols = [cols[i] for i, c in enumerate(cols_lower) if "upload" in c or "download" in c]
+    network_cols = [cols[i] for i, c in enumerate(cols_lower) if "network" in c]
+    usb_cols = [cols[i] for i, c in enumerate(cols_lower) if "usb" in c]
 
-    #feature level error analysis
-    feature_errors = (X_test_tensor - reconstructed)**2
-    feature_errors = feature_errors.numpy()
+    print("\nFeature Groups:")
+    print("Login:", login_cols)
+    print("Volume:", volume_cols)
+    print("Network:", network_cols)
+    print("USB:", usb_cols)
 
-    print("\nSample anomalies:\n")
+    def group_error(indices):
+        if len(indices) == 0:
+            return np.zeros(len(feature_errors))
+        return feature_errors[:, indices].mean(axis=1)
 
-    count = 0
-    for i in range(len(predictions)):
-        if predictions[i] == 1:
-            feature = numeric_data.columns[np.argmax(feature_errors[i])]
-            print(f"Index {i} → {feature} spike (Error: {errors[i]:.2f})")
-            count += 1
-            if count >= 10:
-                break
+    login_idx = [cols.get_loc(c) for c in login_cols]
+    volume_idx = [cols.get_loc(c) for c in volume_cols]
+    network_idx = [cols.get_loc(c) for c in network_cols]
+    usb_idx = [cols.get_loc(c) for c in usb_cols]
 
-    #user-level risk scoring
-    results = pd.DataFrame({
+    login_error = group_error(login_idx)
+    volume_error = group_error(volume_idx)
+    network_error = group_error(network_idx)
+    usb_error = group_error(usb_idx)
+
+    # thresholds based on normal data
+    def get_threshold(err):
+        return err[:n_normal].mean() + 2 * err[:n_normal].std()
+
+    login_thr = get_threshold(login_error)
+    volume_thr = get_threshold(volume_error)
+    network_thr = get_threshold(network_error)
+    usb_thr = get_threshold(usb_error)
+
+    # flags based on thresholds
+    login_flag = (login_error > login_thr).astype(int)
+    volume_flag = (volume_error > volume_thr).astype(int)
+    network_flag = (network_error > network_thr).astype(int)
+    usb_flag = (usb_error > usb_thr).astype(int)
+
+    # output table
+    output_df = pd.DataFrame({
         "user_id": user_ids,
-        "error": errors,
-        "is_anomaly": predictions
+        "login": login_flag,
+        "volume": volume_flag,
+        "network": network_flag,
+        "usb": usb_flag
     })
 
-    user_risk = results.groupby("user_id").agg({
-        "error": "mean",
-        "is_anomaly": "sum"
-    }).reset_index()
+    # IMPORTANT: aggregate per user
+    output_df = output_df.groupby("user_id").max().reset_index()
 
-    user_risk.columns = ["user_id", "avg_error", "num_anomalies"]
+    print("\nSample Output:\n")
+    print(output_df.head())
 
-    user_risk["risk_score"] = (
-        user_risk["avg_error"] * 0.7 +
-        user_risk["num_anomalies"] * 0.3
-    )
+    # save file
+    output_df.to_excel("autoencoder_output.xlsx", index=False)
 
-    print("\nTop risky users:\n")
-    print(user_risk.sort_values(by="risk_score", ascending=False).head(5))
+    print("\nSaved to autoencoder_output.xlsx\n")
 
-    print("\nDone.\n")
-
-    return predictions, errors, user_risk
+    return output_df
 
 
-#optional test run
+# test run
 if __name__ == "__main__":
     data = pd.read_csv("behavior_dataset.csv")
     run_autoencoder(data)
