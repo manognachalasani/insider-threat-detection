@@ -32,12 +32,12 @@ class Autoencoder(nn.Module):
 def run_autoencoder(data):
     print("\nRunning Autoencoder...\n")
 
-    #check requied column
-    if "user_id" not in data.columns:
-        raise ValueError("Dataset must contain 'user_id' column")
+    #check required column
+    if "user" not in data.columns:
+        raise ValueError("Dataset must contain 'user' column")
 
     #handle non numeric data
-    feature_cols = data.columns.drop("user_id")
+    feature_cols = data.columns.drop("user")
 
     # keep only numeric columns
     numeric_data = data[feature_cols].select_dtypes(include=[np.number])
@@ -49,7 +49,7 @@ def run_autoencoder(data):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(numeric_data)
 
-    user_ids = data["user_id"].values
+    users = data["user"].values
 
     #define normal data as first 90% of samples
     # assume majority is normal
@@ -108,17 +108,17 @@ def run_autoencoder(data):
 
     #user-level risk scoring
     results = pd.DataFrame({
-        "user_id": user_ids,
+        "user": users,
         "error": errors,
         "is_anomaly": predictions
     })
 
-    user_risk = results.groupby("user_id").agg({
+    user_risk = results.groupby("user").agg({
         "error": "mean",
         "is_anomaly": "sum"
     }).reset_index()
 
-    user_risk.columns = ["user_id", "avg_error", "num_anomalies"]
+    user_risk.columns = ["user", "avg_error", "num_anomalies"]
 
     user_risk["risk_score"] = (
         user_risk["avg_error"] * 0.7 +
