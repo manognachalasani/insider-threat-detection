@@ -9,11 +9,11 @@ from sklearn.ensemble import IsolationForest
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
 print("=" * 60)
-print("🔐 INSIDER THREAT DETECTION - FINAL EXPERIMENT")
+print("INSIDER THREAT DETECTION - ISOLATION FOREST")
 print("=" * 60)
 
 df = pd.read_csv("behavior_dataset.csv")
-print(f"\n📂 Loaded {len(df)} employees")
+print(f"\nLoaded {len(df)} employees")
 
 # Features
 feature_cols = [
@@ -28,7 +28,7 @@ feature_cols = [
 X = df[feature_cols]
 
 # Try MULTIPLE configurations and pick the best
-print("\n🤖 Testing multiple configurations...")
+print("\nTesting multiple configurations...")
 print("=" * 60)
 
 configs = [
@@ -43,7 +43,7 @@ best_df = None
 best_threshold = 48
 
 for config in configs:
-    print(f"\n📌 Testing {config['name']}...")
+    print(f"\nTesting {config['name']}...")
     
     model = IsolationForest(
         contamination=config['contamination'],
@@ -76,23 +76,23 @@ for config in configs:
     print(f"   Best F1 for {config['name']}: {max([f1_score(true_threats, (df['risk_score'] > t).astype(int), zero_division=0) for t in range(45, 56, 2)]):.3f}")
 
 print("\n" + "=" * 60)
-print("🏆 BEST CONFIGURATION FOUND")
+print("BEST CONFIGURATION FOUND")
 print("=" * 60)
-print(f"\n✅ Configuration: {best_config}")
-print(f"✅ Best Threshold: {best_threshold}")
-print(f"✅ F1 Score: {best_f1:.3f}")
-print(f"✅ Precision: {best_precision:.2%}")
-print(f"✅ Recall: {best_recall:.2%}")
+print(f"\nConfiguration: {best_config}")
+print(f"Best Threshold: {best_threshold}")
+print(f"F1 Score: {best_f1:.3f}")
+print(f"Precision: {best_precision:.2%}")
+print(f"Recall: {best_recall:.2%}")
 
-print(f"\n📋 Confusion Matrix:")
-print(f"   ✅ True Negatives: {best_cm[0][0]}")
-print(f"   ❌ False Positives: {best_cm[0][1]}")
-print(f"   ❌ False Negatives: {best_cm[1][0]}")
-print(f"   ✅ True Positives: {best_cm[1][1]}")
+print(f"\nConfusion Matrix:")
+print(f"   True Negatives: {best_cm[0][0]}")
+print(f"   False Positives: {best_cm[0][1]}")
+print(f"   False Negatives: {best_cm[1][0]}")
+print(f"   True Positives: {best_cm[1][1]}")
 
 # Bonus eligibility
 print("\n" + "=" * 60)
-print("🎯 50% BONUS STRATEGY")
+print("50% BONUS STRATEGY")
 print("=" * 60)
 
 print(f"""
@@ -117,8 +117,8 @@ RECOMMENDATION:
 
 # Save best results
 best_df.to_csv("best_isolation_forest_results.csv", index=False)
-print("✅ Saved: best_isolation_forest_results.csv")
+print("Saved: best_isolation_forest_results.csv")
 
 print("\n" + "=" * 60)
-print("📊 WHAT TO PRESENT")
+print("WHAT TO PRESENT")
 print("=" * 60)

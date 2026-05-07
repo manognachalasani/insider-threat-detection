@@ -54,12 +54,12 @@ team = [
      "manognachalasani@gmail.com", ""),
 
     ("Joshitha", "ML Model Architect",
-     "Implemented anomaly detection models.",
-     None, ""),
+     "Implemented anomaly detection models using isolation forest.",
+     "joshitha12102005@gmail.com", ""),
 
     ("Shriyans", "Security Logic & Analysis",
-     "Worked on threat detection logic and analysis.",
-     None, ""),
+     "Worked on anomaly detection models using autoencoders.",
+     "bachushriyans205@gmail.com", ""),
 ]
 
 c1, c2 = st.columns(2)
@@ -89,6 +89,8 @@ st.markdown("""
 
 <p style='font-family:Share Tech Mono;color:#00c8ff;'>aishikamareddy@gmail.com</p>
 <p style='font-family:Share Tech Mono;color:#00c8ff;'>manognachalasani@gmail.com</p>
+<p style='font-family:Share Tech Mono;color:#00c8ff;'>joshitha12102005@gmail.com</p>
+<p style='font-family:Share Tech Mono;color:#00c8ff;'>bachushriyans205@gmail.com</p>
 </div>
 """, unsafe_allow_html=True)
 

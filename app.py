@@ -20,20 +20,66 @@ st.markdown("<div class='page-subtitle'>Behavioral Anomaly Intelligence Dashboar
 @st.cache_data
 def load_data():
     df = pd.read_excel("behavior_dataset.xlsx")
-    st.write(df.columns)
-    model = IsolationForest(contamination=0.15, random_state=42)
+
+    # Features used for anomaly detection
+    features = [
+        "total_logins",
+        "avg_login_hour",
+        "std_login_hour",
+        "weekend_login_rate",
+        "after_hours_rate",
+        "avg_hours_between_logins",
+        "min_login_hour",
+        "max_login_hour",
+        "total_web_visits",
+        "file_download_count",
+        "file_download_rate",
+        "file_upload_count",
+        "file_upload_rate",
+        "unique_sites",
+        "network_usage_mb",
+        "network_anomaly_score",
+        "usb_connect_count",
+        "unique_usb_devices",
+        "download_upload_ratio",
+        "unusual_hour_score",
+        "combined_risk"
+    ]
+
+    # Keep only existing columns
+    features = [f for f in features if f in df.columns]
+
+    # Fill missing values
+    df[features] = df[features].fillna(0)
+
+    # Isolation Forest
+    model = IsolationForest(
+        contamination=0.15,
+        random_state=42
+    )
+
     model.fit(df[features])
+
     scores = model.decision_function(df[features])
-    df["risk_score"] = (scores.max() - scores) / (scores.max() - scores.min())
+
+    # Convert to positive risk score
+    df["risk_score"] = (
+        (scores.max() - scores)
+        / (scores.max() - scores.min())
+    )
+
+    # Risk labels
     def get_risk(s):
-        if s > 0.75: return "CRITICAL"
-        if s > 0.45: return "ELEVATED"
+        if s > 0.75:
+            return "CRITICAL"
+        if s > 0.45:
+            return "ELEVATED"
         return "STABLE"
+
     df["status"] = df["risk_score"].apply(get_risk)
+
     return df, features
-
 df, features = load_data()
-
 st.markdown("<br>", unsafe_allow_html=True)
 m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric(" Active Nodes",     len(df),                            "ONLINE")

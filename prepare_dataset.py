@@ -7,9 +7,6 @@ print("="*60)
 print("COMPLETE DATASET PREPARATION - ALL REQUIREMENTS")
 print("="*60)
 
-# =========================
-# LOAD DATASETS
-# =========================
 print("\n1. Loading files...")
 logon = pd.read_csv("logon.csv")
 http = pd.read_csv("http.csv", header=None)
@@ -26,15 +23,10 @@ device['date'] = pd.to_datetime(device['date'])
 print(f"   Logon: {len(logon):,} rows, {logon['user'].nunique()} users")
 print(f"   HTTP: {len(http):,} rows, {http['user'].nunique()} users")
 
-# =========================
-# 1. USER IDs (✅ Green Tick)
-# =========================
-all_users = logon['user'].unique()
-print(f"\n✅ User IDs: {len(all_users)} unique users")
 
-# =========================
-# 2. TIMESTAMPS & LOGIN TIMES (✅ Green Tick)
-# =========================
+all_users = logon['user'].unique()
+print(f"\n User IDs: {len(all_users)} unique users")
+
 print("\n2. Extracting timestamps & login patterns...")
 logon_logins = logon[logon["activity"] == "Logon"].copy()
 logon_logins = logon_logins.sort_values(['user', 'date'])
@@ -77,11 +69,8 @@ for user, group in logon_logins.groupby('user'):
     login_stats.append(stats)
 
 login_features = pd.DataFrame(login_stats)
-print(f"   ✅ Processed login features for {len(login_features)} users")
+print(f"   Processed login features for {len(login_features)} users")
 
-# =========================
-# 3. FILE COUNTS (✅ Green Tick)
-# =========================
 print("\n3. Extracting file counts...")
 web_stats = []
 for user, group in http.groupby('user'):
@@ -100,11 +89,9 @@ for user, group in http.groupby('user'):
     web_stats.append(stats)
 
 web_features = pd.DataFrame(web_stats)
-print(f"   ✅ File counts: avg downloads = {web_features['file_download_count'].mean():.1f} per user")
+print(f"    File counts: avg downloads = {web_features['file_download_count'].mean():.1f} per user")
 
-# =========================
-# 4. NETWORK USAGE (✅ Green Tick)
-# =========================
+
 print("\n4. Estimating network usage...")
 
 def estimate_network_mb(row):
@@ -116,11 +103,9 @@ def estimate_network_mb(row):
 web_features['network_usage_mb'] = web_features.apply(estimate_network_mb, axis=1)
 web_features['network_anomaly_score'] = web_features['network_usage_mb'] / (web_features['network_usage_mb'].max() + 1)
 
-print(f"   ✅ Network usage: avg = {web_features['network_usage_mb'].mean():.1f} MB, max = {web_features['network_usage_mb'].max():.1f} MB")
+print(f"    Network usage: avg = {web_features['network_usage_mb'].mean():.1f} MB, max = {web_features['network_usage_mb'].max():.1f} MB")
 
-# =========================
-# 5. ROLES (✅ Green Tick)
-# =========================
+
 print("\n5. Assigning roles based on behavior...")
 
 def assign_role(row):
@@ -139,12 +124,10 @@ def assign_role(row):
 temp_df = login_features.merge(web_features, on='user', how='left').fillna(0)
 temp_df['role'] = temp_df.apply(assign_role, axis=1)
 
-print(f"   ✅ Role distribution:")
+print(f"    Role distribution:")
 print(temp_df['role'].value_counts())
 
-# =========================
-# 6. USB DEVICE USAGE (✅ Green Tick)
-# =========================
+
 print("\n6. Extracting USB device usage...")
 usb_stats = []
 if 'user' in device.columns and len(device) > 0:
@@ -164,20 +147,15 @@ if len(usb_features) == 0:
     usb_features['usb_connect_count'] = 0
     usb_features['unique_usb_devices'] = 0
 
-print(f"   ✅ USB data: {len(usb_features[usb_features['usb_connect_count'] > 0])} users used USB")
+print(f"    USB data: {len(usb_features[usb_features['usb_connect_count'] > 0])} users used USB")
 
-# =========================
-# 7. MERGE EVERYTHING (✅ Green Tick)
-# =========================
 print("\n7. Merging all features...")
 final_dataset = login_features.merge(web_features, on='user', how='left')
 final_dataset = final_dataset.merge(usb_features, on='user', how='left')
 final_dataset = final_dataset.merge(temp_df[['user', 'role']], on='user', how='left')
 final_dataset = final_dataset.fillna(0)
 
-# =========================
-# 7.5 ADD ENGINEERED FEATURES (NEW - For better anomaly detection)
-# =========================
+
 print("\n7.5 Creating engineered features for better detection...")
 
 # Feature 1: Download to upload ratio (insiders download more than they upload)
@@ -197,11 +175,9 @@ final_dataset['combined_risk'] = (
     (final_dataset['usb_connect_count'] > 0).astype(int)
 )
 
-print(f"   ✅ Added 3 engineered features")
+print(f"    Added 3 engineered features")
 
-# =========================
-# 8. NORMALIZE TO 0-1 (✅ Green Tick) - UPDATE THIS LIST
-# =========================
+
 print("\n8. Normalizing features to 0-1...")
 features_to_normalize = [
     'total_logins', 'avg_login_hour', 'std_login_hour',
@@ -218,11 +194,8 @@ existing_features = [f for f in features_to_normalize if f in final_dataset.colu
 scaler = MinMaxScaler(feature_range=(0, 1))
 final_dataset[existing_features] = scaler.fit_transform(final_dataset[existing_features])
 
-print(f"   ✅ All {len(existing_features)} features normalized to 0-1")
+print(f"    All {len(existing_features)} features normalized to 0-1")
 
-# =========================
-# 9. SEPARATE ANOMALY SCORES (✅ Green Tick)
-# =========================
 print("\n9. Calculating separate anomaly scores...")
 
 # Login Anomaly Score
@@ -256,11 +229,9 @@ final_dataset['anomaly_overall'] = (
     final_dataset['anomaly_usb'] * 0.15
 )
 
-print(f"   ✅ Created 5 separate anomaly scores per user")
+print(f"    Created 5 separate anomaly scores per user")
 
-# =========================
-# 10. GROUND TRUTH LABELS (Fixed - No syntax errors)
-# =========================
+
 print("\n10. Creating ground truth labels...")
 final_dataset['is_insider_threat'] = 0
 
@@ -278,36 +249,33 @@ condition6 = final_dataset['anomaly_overall'] > top_threshold
 # Combine all conditions
 final_dataset.loc[condition1 | condition2 | condition3 | condition4 | condition5 | condition6, 'is_insider_threat'] = 1
 
-print(f"   ✅ Marked {final_dataset['is_insider_threat'].sum()} users as threats ({final_dataset['is_insider_threat'].mean():.1%})")
+print(f"    Marked {final_dataset['is_insider_threat'].sum()} users as threats ({final_dataset['is_insider_threat'].mean():.1%})")
 
-# =========================
-# SAVE EVERYTHING
-# =========================
+
 print("\n11. Saving all files...")
 final_dataset.to_csv("behavior_dataset.csv", index=False)
-print("   ✅ behavior_dataset.csv (main dataset)")
+print("   behavior_dataset.csv (main dataset)")
 
 # Export summary for dashboard
 summary = final_dataset[['user', 'role', 'anomaly_login', 'anomaly_volume', 
                           'anomaly_network', 'anomaly_usb', 'anomaly_overall', 
                           'is_insider_threat']]
 summary.to_csv("anomaly_scores_separate.csv", index=False)
-print("   ✅ anomaly_scores_separate.csv (separate scores for dashboard)")
+print("   anomaly_scores_separate.csv (separate scores for dashboard)")
 
 # Export normalized features only (for autoencoder)
 norm_features = final_dataset[['user'] + existing_features]
 norm_features.to_csv("normalized_features_for_autoencoder.csv", index=False)
-print("   ✅ normalized_features_for_autoencoder.csv (for your friend)")
 
 print("\n" + "="*60)
-print("🎉 ALL GREEN TICKS - DATASET COMPLETE!")
+
 print("="*60)
-print(f"\n✅ User IDs: {len(final_dataset)} users")
-print(f"✅ Timestamps: Saved to user_timestamps.csv")
-print(f"✅ File counts: Avg {final_dataset['file_download_count'].mean():.2f} downloads/user")
-print(f"✅ Network usage: Avg {final_dataset['network_usage_mb'].mean():.2f} MB/user")
-print(f"✅ Roles: {final_dataset['role'].nunique()} types")
-print(f"✅ Normalized: {len(existing_features)} features in 0-1 range")
-print(f"✅ Separate anomalies: 5 scores per user")
-print(f"✅ Ground truth: {final_dataset['is_insider_threat'].sum()} threats marked")
+print(f"\n User IDs: {len(final_dataset)} users")
+print(f"Timestamps: Saved to user_timestamps.csv")
+print(f"File counts: Avg {final_dataset['file_download_count'].mean():.2f} downloads/user")
+print(f"Network usage: Avg {final_dataset['network_usage_mb'].mean():.2f} MB/user")
+print(f"Roles: {final_dataset['role'].nunique()} types")
+print(f"Normalized: {len(existing_features)} features in 0-1 range")
+print(f"Separate anomalies: 5 scores per user")
+print(f"Ground truth: {final_dataset['is_insider_threat'].sum()} threats marked")
 

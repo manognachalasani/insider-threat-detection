@@ -18,13 +18,33 @@ st.info(" **Simulation Mode Active** — Adjust sliders to simulate a user's beh
 
 @st.cache_resource
 def load_model():
+
     df_train = pd.read_excel("behavior_dataset.xlsx")
-    features = ["anomaly_login", "anomaly_volume", "anomaly_network", "anomaly_usb"]
-    model = IsolationForest(contamination=0.15, random_state=42)
+
+    features = [
+        "anomaly_login_isolationforest",
+        "anomaly_volume_isolationforest",
+        "anomaly_network_isolationforest",
+        "anomaly_usb_isolationforest"
+    ]
+
+    # Keep only valid columns
+    features = [f for f in features if f in df_train.columns]
+
+    # Fill missing values
+    df_train[features] = df_train[features].fillna(0)
+
+    model = IsolationForest(
+        contamination=0.15,
+        random_state=42
+    )
+
     model.fit(df_train[features])
+
     return model, df_train, features
 
 model, df_train, features = load_model()
+
 
 st.markdown("<br>", unsafe_allow_html=True)
 c1, c2 = st.columns(2)
