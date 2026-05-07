@@ -20,7 +20,7 @@ st.markdown("<div class='page-subtitle'>Behavioral Anomaly Intelligence Dashboar
 @st.cache_data
 def load_data():
     df = pd.read_excel("behavior_dataset.xlsx")
-    features = ["anomaly_login", "anomaly_volume", "anomaly_network", "anomaly_usb"]
+    st.write(df.columns)
     model = IsolationForest(contamination=0.15, random_state=42)
     model.fit(df[features])
     scores = model.decision_function(df[features])
